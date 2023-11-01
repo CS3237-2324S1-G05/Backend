@@ -1,35 +1,33 @@
 import paho.mqtt.client as mqtt
 import datetime
 
-from db_api_calls import db_store_carplate, db_get_nearest_lot, db_store_carplate_and_lot_number, db_update_lot_availability, db_get_car_entrance_time
+from mongodb_class import Database
 
-BROKER_IP = '192.168.86.181'
+BROKER_IP = 'localhost'
 BROKEN_PORT = 1883
-
-# TODO: Number of lots?
 
 EVENT_GANTRY_TOPIC = 'event/gantry/'
 EVENT_LOT_TOPIC = 'event/lot/'
 
+# Request ESP32 to take image
 CAM_CARPARK_TOPIC = 'cam/carpark'
 CAM_LOT_TOPIC = 'cam/lot/'
 CAM_GANTRY_ENTRANCE_TOPIC = 'cam/gantry/entrance'
 CAM_GANTRY_EXIT_TOPIC = 'cam/gantry/exit'
 
-# STATUS_ENTRANCE_HUMAN_PRESENCE_TOPIC = 'status/entrance/human-presence'
-STATUS_ENTRANCE_NEAREST_LOT_TOPIC = 'status/entrance/nearest-lot'
+# Get carplate numbers from ML
 STATUS_ENTRANCE_CARPLATE_TOPIC = 'status/entrance/carplate'
-
 STATUS_EXIT_CARPLATE_TOPIC = 'status/exit/carplate'
-STATUS_EXIT_PARKING_FEE_TOPIC = 'status/exit/parking-fee'
-
 STATUS_LOT_CARPLATE_TOPIC = 'status/lot/carplate/'
 
-STATUS_ = 'ml/carplate/entrance'
-STATUS_ = 'ml/carplate/exit'
-STATUS_ = 'ml/human-presence'
+# Send number of lots to gantry
+STATUS_NUMBER_OF_LOTS_TOPIC = 'status/entrance/number-of-available-lots'
+# Send nearest lot number to gantry when car enters
+STATUS_ENTRANCE_NEAREST_LOT_TOPIC = 'status/entrance/nearest-lot'
+# Send parking fee of car to gantry when car exits
+STATUS_EXIT_PARKING_FEE_TOPIC = 'status/exit/parking-fee'
 
-
+# TODO: db: Get value from db instead
 # <0, 1, 2, 3>
 NUMBER_OF_LOTS = 4
 
@@ -44,17 +42,13 @@ def handle_gantry_event(topic, msg):
         # Inform ESP32 to take photo of carpark, gantry entrance
         publish_to_topic(CAM_CARPARK_TOPIC, 'DETECTED')
         publish_to_topic(CAM_GANTRY_ENTRANCE_TOPIC, 'DETECTED')
-        
-        # Return data to gantry
-        # STATUS_ENTRANCE_HUMAN_PRESENCE_TOPIC: Done on flask
-        # STATUS_ENTRANCE_CARPLATE_TOPIC: Done on another function in this file
-        # nearest_lot = db_get_nearest_lot()
-        # publish_to_topic(STATUS_ENTRANCE_NEAREST_LOT_TOPIC, nearest_lot)
+        # Inform gantry the nearest lot
+        # TODO: db
+        nearest_lot = db.get_nearest_lot()
+        publish_to_topic(STATUS_ENTRANCE_NEAREST_LOT_TOPIC, nearest_lot)
     elif gantry_name == 'exit':
         # Inform ESP32 to take photo of gantry entrance
-        publish_to_topic(STATUS_EXIT_CARPLATE_TOPIC, 'DETECTED')
-        
-        # STATUS_EXIT_PARKING_FEE_TOPIC: Done on another function in this file
+        publish_to_topic(CAM_GANTRY_EXIT_TOPIC, 'DETECTED')
     else:
         print('Unknown gantry name: {}'.format(gantry_name))
         
@@ -73,10 +67,21 @@ def handle_lot_event(topic, msg):
         # Request ESP32 to take photo of lot/car plate
         publish_to_topic(CAM_LOT_TOPIC + str(lot_number), 'DETECTED')
     elif event_type == 'leave':
-        # Update lot availability in DB
-        db_update_lot_availability(lot_number, True)
+        # TODO: db: Update lot availability in DB
+        db.update_availability(lot_number, True)
     else:
         print('Unknown event type: {}'.format(event_type))
+        
+def send_parking_fee_to_gantry(carplate):
+    # TODO: db
+    car_entrance_time = db.get_last_entry(carplate)
+    current_time = datetime.datetime.now()
+    time_difference = current_time - car_entrance_time
+    parking_duration = time_difference.hour
+    if time_difference.minute > 0 or time_difference.second > 0:
+        parking_duration += 1
+    parking_fee = parking_duration * 2.5
+    publish_to_topic(STATUS_EXIT_PARKING_FEE_TOPIC, parking_fee)
 
 def on_connect(client, userdata, flags, rc):
     print('Connected with result code: ' + str(rc))
@@ -88,8 +93,12 @@ def on_connect(client, userdata, flags, rc):
     # Subscribe to get carplate of cars going out of carpark
     client.subscribe(STATUS_EXIT_CARPLATE_TOPIC)
     
-    # Subcribe to cars parking at lots
+    # Subcribe to cars parking/leaving at/from lots
     client.subscribe(EVENT_LOT_TOPIC + '#')
+    # Subscribe to get carplate of cars parking/leaving at/from lots
+    client.subscribe(STATUS_LOT_CARPLATE_TOPIC + '#')
+    
+
 
 def on_message(client, userdata, message):
     topic = message.topic
@@ -101,19 +110,19 @@ def on_message(client, userdata, message):
     elif topic.startswith(EVENT_LOT_TOPIC):
         handle_lot_event(topic, msg)
     elif topic == STATUS_ENTRANCE_CARPLATE_TOPIC:
-        db_store_carplate(msg)
+        # TODO: db
+        db.add_entry(msg)
     elif topic == STATUS_EXIT_CARPLATE_TOPIC:
-        car_entrance_time = db_get_car_entrance_time(msg)
-        current_time = datetime.datetime.now()
-        time_difference = current_time - car_entrance_time
-        # Round up seconds to 1 minute, 50c per minute
-        parking_fee = (time_difference.hour * 60 + time_difference.minute + 1) * 0.5
-        publish_to_topic(STATUS_EXIT_PARKING_FEE_TOPIC, parking_fee)
+        send_parking_fee_to_gantry(msg)
     elif topic.startswith(STATUS_LOT_CARPLATE_TOPIC):
         lot_number = topic.split('/')[-1]
-        db_store_carplate_and_lot_number(msg, lot_number)
+        print('lot_number: {}, carplate: {}'.format(lot_number, msg))
+        # TODO: db: edit db.add_entry to update lot number
+        db.add_entry(msg, lot_number)
     else:
         print('Unknown topic: {}'.format(topic))
+        
+db = Database()
 
 client = mqtt.Client()
 client.on_connect = on_connect
