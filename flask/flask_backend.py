@@ -18,7 +18,8 @@ def allowed_file(filename):
 def send_image_to_ml(port, path, id=None):
     # TODO: To be uncommented after zehou is done
     # Stub file
-    file = 'test'
+    # file = 'test'
+    file = open('./people/people1.jpg', 'rb')
     
     # # Check if a file was included in the POST request
     # if 'file' not in request.files:

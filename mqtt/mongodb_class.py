@@ -1,12 +1,10 @@
 import pymongo
 import datetime
 
-
-# Table structure:
+# Table structure:"entries"
 # entries: (__id, entry_id: int, plate: str, lot_id: int, time: datetime)
 # lots: (__id, lot_id: int, availability: int )
-class Database:
-	
+class Database:  
 	# Username and password shall be provided by caller
 	# these info are neither hardcoded nor stored in heap for security reasons
 	# if either of these two fields is None, will try to connect in no auth mode
@@ -19,50 +17,58 @@ class Database:
 		self.port = "27017"
 		self.db_name = "parking_lot"
 		self.lots_index = 0
-		self.entries_index = 0
+  
+		self.entries_collection_name = "entries"
+		self.lots_collection_name = "lots"
+  
+		# Connect to database
 		if username==None or password==None:
-			self.client = pymongo.MongoClient("mongodb://"+self.ip+":"+self.port+"/")
+			self.client = pymongo.MongoClient(f"mongodb://{self.ip}:{self.port}/")
 		else:
-			self.client = pymongo.MongoClient("mongodb+srv://"+username+":"+password+"@"+self.ip+"/")
+			self.client = pymongo.MongoClient(f"mongodb+srv://{username}:{password}@{self.ip}/")
+		print(f"Connected to database")
+   
+		# Check if database exists
 		db_list = self.client.list_database_names()
 		if not self.db_name in db_list:
 			if not force:
-				raise Exception("Cannot find database "+self.db_name)
-			print("Cannot find database \""+self.db_name+"\", creating one")
+				raise Exception(f"Cannot find database {self.db_name}")
+			print(f"Cannot find database {self.db_name} creating one")
 		self.db = self.client[self.db_name]
+  
+		# Check if tables exist
 		tb_list = self.db.list_collection_names()
-		if not "entries" in tb_list:
+		# Create entries table if does not exist
+		if not self.entries_collection_name in tb_list:
 			if not force:
 				raise Exception("Cannot find table entries")
 			print("Creating table entries")
-		self.db["entries"]
-		if not "lots" in tb_list:
+		self.db[self.entries_collection_name]
+		# Create lots table if does not exist
+		if not self.lots_collection_name in tb_list:
 			if not force:
 				raise Exception("Cannot find table lots")
 			print("Creating table lots")
-		self.db["lots"]
-		if not keep_previous_data:
-			self.hard_reset()
-		else:
+		self.db[self.lots_collection_name]
+  
+		# Restore indices if keep previous data (by default)
+		if keep_previous_data:
 			self.restore_indices()
+		else:
+			self.hard_reset()
 	
 	def hard_reset(self):
 		print("Warning: hard reseting database, all previous data will be lost")
-		tb = self.db["lots"]
+		tb = self.db[self.lots_collection_name]
 		tb.drop()
-		tb = self.db["entries"]
+		tb = self.db[self.entries_collection_name]
 		tb.drop()
-		self.entries_index = 0
 		self.lots_index = 0
-		self.db["entries"]
-		self.db["lots"]
+		self.db[self.entries_collection_name]
+		self.db[self.lots_collection_name]
   
 	def restore_indices(self):
-		entries = self.db["entries"].find()
-		self.entries_index = 0
-		for _ in entries:
-			self.entries_index = self.entries_index + 1
-		lots = self.db["lots"].find()
+		lots = self.db[self.lots_collection_name].find()
 		self.lots_index = 0
 		for _ in lots:
 			self.lots_index = self.lots_index + 1
@@ -89,10 +95,20 @@ class Database:
 	def update(self, tb_name, cond, new_val, update_all=True):
 		tb = self.db[tb_name]
 		set_val = {"$set" : new_val}
+		result = None
 		if update_all:
-			return tb.update_many(cond, set_val).modified_count
-		tb.update_one(cond, set_val)
-		return 1
+			result = tb.update_many(cond, set_val).modified_count
+			return result
+		else:
+			result = tb.update_one(cond, set_val)
+			if result.matched_count > 0:
+				if result.modified_count > 0:
+					print("The document was updated.")
+				else:
+					print("The document matched the query but was not updated.")
+			else:
+				print("No document matched the query.")
+			return result.modified_count
 			
 	# DELETE FROM <tb_name> WHERE <cond>
 	# tb_name should be a string
@@ -115,14 +131,14 @@ class Database:
 		tb = self.db[tb_name]
 		return tb.find(cond)
 
-	# TODO
 	# add a new parking lot to the system
 	def add_lot(self, availability: int):
 		if availability<0:
 			raise Exception("Invalid availability")
 		record = {"lotId" : self.lots_index, "isAvailable": availability}
 		self.lots_index = self.lots_index + 1
-		self.insert("lots", record)
+		self.insert(self.lots_collection_name, record)
+		print(f'Added lot to collection {self.lots_collection_name}: {record}')
 		return self.lots_index - 1
 
 	# record down a new entry a car has made
@@ -130,32 +146,40 @@ class Database:
 		if plate==None:
 			raise Exception("Invalid plate")
 		record = {
-    			"entryId" : self.entries_index, 
+    			# "entryId" : self.entries_index, 
     			"plate" : plate, 
     			"lotId": lot_id if lot_id is not None else -1, 
     			"time" : datetime.datetime.utcnow()
     	}
-		self.insert("entries", record)
-		self.entries_index = self.entries_index + 1
-		return self.entries_index - 1
+		self.insert(self.entries_collection_name, record)
+		print(f'Added entry to collection {self.entries_collection_name}: {record}')
+
+	def update_car_lot_entry(self, plate: str, lot_id: int):
+		cond = {"plate" : plate}
+		record = {"lotId" : lot_id}
+		updates = self.update(self.entries_collection_name, cond, record)
+		if updates==0:
+			raise Exception("Cannot find plate {plate}")
+		if updates>1:
+			raise Exception(f"Internal Error: multiple plates {plate} found, check db manually")
+		print(f'Updated plate {plate} parked at lot {lot_id}')
 
 	# update the availability of a lot
-	def update_availability(self, lot_id: int, new_availability: int):
-		# TODO
-		if new_availability<0:
-			raise Exception("Invalid availability")
-		cond = {"lot_id" : lot_id}
-		record = {"lot_id" : lot_id, "isAvailable": new_availability}
-		updates = self.update("lots", cond, record)
+	def update_availability(self, lot_id: int, new_availability: bool):
+		lot_id = int(lot_id)
+		cond = {"lotId" : lot_id}
+		record = {"lotId" : lot_id, "isAvailable": new_availability}
+		updates = self.update(self.lots_collection_name, cond, record, False)
 		if updates==0:
-			raise Exception("Cannot find lot with lot_id "+str(lot_id))
+			raise Exception(f"Cannot update availability of lot {lot_id}")
 		if updates>1:
-			raise Exception("Internal Error: multiple lots with lot_id"+str(lot_id)+" found, check db manually")
+			raise Exception(f"Internal Error: multiple lots with lotId {lot_id} found, check db manually")
+		print(f'Updated availability of lot {lot_id} to {new_availability}')
 
 	# get the last entry a car has made, this is what u wanna used for calculation
 	def get_last_entry(self, plate: str):
 		cond = {"plate" : plate}
-		results = self.select("entries", cond)
+		results = self.select(self.entries_collection_name, cond)
 		ans = []
 		for result in results:
 			ans.append(result)
@@ -163,50 +187,52 @@ class Database:
 		for entry in ans:
 			if result==None or entry["time"]>result["time"]:
 				result = entry
-		return result
+		if result is None:
+			raise Exception(f'Cannot find car {plate}')
+		else:
+			print(f'Car {plate} entered carpark at {result}')
+			return result
+ 
+	def get_last_entry_time(self, carplate):
+		return self.get_last_entry(carplate)['time']
 
 	# get all entries a car has made
 	def get_all_entries(self, plate: str):
 		cond = {"plate" : plate}
-		results = self.select("entries", cond)
+		results = self.select(self.entries_collection_name, cond)
 		ans = []
 		for result in results:
 			ans.append(result)
 		return ans
 
-	# TODO: Redo
 	# get number of free lots in parking lot lot_id
 	def get_availability(self, lot_id: int):
 		cond = {"lot_id" : lot_id}
-		results = self.select("lots", cond)
+		results = self.select(self.lots_collection_name, cond)
 		ans = []
 		for result in results:
 			ans.append(result)
 		if len(ans)==0:
-			raise Exception("Cannot find lot with lot_id "+str(lot_id))
+			raise Exception(f"Cannot find lot with lot_id {str(lot_id)}")
 		if len(ans)>1:
-			raise Exception("Internal Error: multiple lots with lot_id"+str(lot_id)+" found, check db manually")	
+			raise Exception(f"Internal Error: multiple lots with lot_id {str(lot_id)} found, check db manually")	
 		return ans[0]["availability"]
 
-	# def is_available(self, lot_id: int):
-	# 	return self.get_availability(lot_id) > 0
-
-	# def db_store_carplate(carplate):
-
-	# def db_get_car_entrance_time(carplate):
-
-
-
-
-	# def db_get_nearest_lot():
-
-	# def db_store_carplate_and_lot_number(carplate, lot_number):
-
-	# def db_update_lot_availability(lot_number, is_available):
-					
-	# def db_get_number_of_available_lots():
-			
-	# def db_get_lot_number(carplate):
+	def get_nearest_available_lot(self):
+		nearest_lot = self.select("lots", {'isAvailable': True}).sort("lotId", 1).limit(1)
+		if nearest_lot:
+			print(f"Nearest Lot ID: {nearest_lot['lotId']}, Availability: {nearest_lot['isAvailable']}")
+			return nearest_lot['lotId']
+		else:
+			print("No available lots.")
+			return None
  
-	if __name__ == '__main__':
-		db = Database()
+	def get_number_of_available_lots(self):
+		count = self.db["lots"].count_documents({'isAvailable': True})
+		print(f"Number of available lots in carpark: {count}")
+		return count
+ 
+	def get_number_of_lots(self):
+		count = self.db["lots"].count_documents({})
+		print(f"Number of lots in carpark: {count}")
+		return count
