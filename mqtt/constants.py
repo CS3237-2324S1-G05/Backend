@@ -1,4 +1,4 @@
-BROKER_IP = 'localhost'
+BROKER_IP = '192.168.43.156'
 BROKEN_PORT = 1883
 
 EVENT_GANTRY_TOPIC = 'event/gantry/'

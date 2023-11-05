@@ -36,10 +36,10 @@ def handle_car_at_entrance():
     publish_to_topic(constants.CAM_GANTRY_ENTRANCE_TOPIC, 'DETECTED')
     
     # Stub
-    response = requests.post('http://{}:{}/{}'.format('localhost', 7000, 'backend/human-recognition'))
+    response = requests.post('http://{}:{}/{}'.format('localhost', 3237, 'backend/human-recognition'))
     # Stub
-    response = requests.post('http://{}:{}/{}'.format('localhost', 7000, 'backend/carplate-recognition/entrance'))
-    
+    response = requests.post('http://{}:{}/{}'.format('localhost', 3237, 'backend/carplate-recognition/entrance'))
+    print("HI IM HERE")
     # Inform gantry the nearest lot (Return str(id) or str(None))
     nearest_available_lot = str(db.get_nearest_available_lot())
     publish_to_topic(constants.STATUS_ENTRANCE_NEAREST_LOT_TOPIC, nearest_available_lot)
@@ -52,7 +52,7 @@ def handle_car_at_exit():
     # Inform ESP32 to take photo of gantry entrance
     publish_to_topic(constants.CAM_GANTRY_EXIT_TOPIC, 'DETECTED')
     
-    response = requests.post('http://{}:{}/{}'.format('localhost', 7000, 'backend/carplate-recognition/exit'))
+    response = requests.post('http://{}:{}/{}'.format('localhost', 3237, 'backend/carplate-recognition/exit'))
         
 def handle_lot_event(topic, msg):
     topic_levels = topic.split('/')
@@ -82,7 +82,7 @@ def handle_car_park_lot(lot_number):
     # Request ESP32 to take photo of lot/car plate
     publish_to_topic(constants.CAM_LOT_TOPIC + str(lot_number), 'DETECTED')
     
-    response = requests.post('http://{}:{}/{}'.format('localhost', 7000, 'backend/carplate-recognition/lot'))
+    response = requests.post('http://{}:{}/{}'.format('localhost', 3237, 'backend/carplate-recognition/lot'))
 
 def handle_car_leave_lot(lot_number):
     # Update lot availability in DB
@@ -169,6 +169,9 @@ def on_message(client, userdata, message):
 if __name__ == '__main__':
     db_username = os.getenv('DB_USERNAME')
     db_password = os.getenv('DB_PASSWORD')
+    db_username = 'CS3237_Group5'
+    db_password = 'cs3237555'
+    print (db_username, db_password)
     db = Database(db_username, db_password)
     
     number_of_lots = db.get_number_of_lots()

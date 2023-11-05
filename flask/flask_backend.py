@@ -1,7 +1,10 @@
 import requests
 from flask import Flask, request, jsonify
+import os
 
-ML_IP = '192.168.86.249'
+ID = 1
+
+ML_IP = '192.168.43.28'
 ML_HUMAN_PRESENCE_DETECTOR_PORT = 8000
 ML_CARPLATE_RECOGNITION_PORT = 8080
 
@@ -12,6 +15,9 @@ ML_LOT_CARPLATE_RECOGNITION_ENDPOINT = 'ml/lot'
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER_ENTRANCE = 'entrance'
+app.config['CARS_FOLDER_ENTRANCE'] = UPLOAD_FOLDER_ENTRANCE
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
 
@@ -19,24 +25,26 @@ def send_image_to_ml(port, path, id=None):
     # TODO: To be uncommented after zehou is done
     # Stub file
     # file = 'test'
-    file = open('./people/people1.jpg', 'rb')
+    # file = open('./people/people1.jpg', 'rb')
     
-    # # Check if a file was included in the POST request
-    # if 'file' not in request.files:
-    #     return jsonify({'error': 'No file part'}), 400
+    # Check if a file was included in the POST request
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
     
-    # file = request.files['file']
+    file = request.files['file']
     
-    # # Check if filename is empty
-    # if file.filename == '':
-    #     return jsonify({'error': 'No selected file'}), 400
+    # Check if filename is empty
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
     
-    # # Check if the file type is allowed
-    # if not allowed_file(file.filename):
-    #     return jsonify({'error': 'Invalid file format'}), 400
+    # Check if the file type is allowed
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file format'}), 400
     
     # If image is valid
     if file:
+        filename = os.path.join(app.config[upload_string], file.filename)
+        file.save(filename)
         try:
             ml_url = 'http://{}:{}/{}'.format(ML_IP, port, path)
             print('Sending file to ML: {}'.format(ml_url))
@@ -77,4 +85,4 @@ def handle_carplate_recognition_lot():
     return send_image_to_ml(ML_CARPLATE_RECOGNITION_PORT, ML_LOT_CARPLATE_RECOGNITION_ENDPOINT, lot_number)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port= 7000)
+    app.run(host='0.0.0.0', port= 3237)
