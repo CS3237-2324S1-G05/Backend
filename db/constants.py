@@ -1,0 +1,6 @@
+# Mongo related
+MONGODB_IP = 'cluster0.8tghxvd.mongodb.net'
+MONGODB_PORT = '27017'
+MONGODB_DATABASE_NAME = 'Carpark'
+MONGODB_ENTRY_COLLECTION_NAME = 'Entry'
+MONGODB_LOT_COLLECTION_NAME = 'Lot'
