@@ -1,3 +1,9 @@
+<<<<<<< HEAD:common_utils/mqtt_topic_constants.py
+=======
+BROKER_IP = '192.168.43.156'
+BROKEN_PORT = 1883
+
+>>>>>>> 00aed35fcb8e813899e94c324d416dee1ddeeeef:mqtt/constants.py
 EVENT_GANTRY_TOPIC = 'event/gantry/'
 EVENT_LOT_TOPIC = 'event/lot/'
 
