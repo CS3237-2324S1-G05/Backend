@@ -22,6 +22,7 @@ The actual database is running on MongoDB Atlas.
 - /db-backend/update-lot-carplate
 - /db-backend/update-car-lot-entry
 - /db-backend/add-entry
+- /db-backend/update-car-exit-entry
 
 ## Database Flask Endpoints
 
