@@ -37,7 +37,7 @@ source .env
 5. Install packages. This step is only for the initial setup. You may skip it in your subsequent runs.
 
 ```
-bash ./install.sh
+pip install -r requirements.txt
 ```
 
 6. Run the python script. You can now access via `localhost:6000` or `<your ip>:6000`.

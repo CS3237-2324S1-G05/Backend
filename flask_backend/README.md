@@ -9,6 +9,7 @@ This is the centralised Flask backend for the smart carpark.
 ### Starting up Backend Flask API
 
 For initial setting up, please go through all the steps below. For subsequent runs, you may skip steps.
+Please do not delete the 4 folders (`entrance_img`, `exit_img`, `human_img`, and `lot_img`) in this directory.
 
 1. Open your console in `./flask_backend`.
 
@@ -31,7 +32,7 @@ source ./venv/bin/activate
 4. Install packages. This step is only for the initial setup. You may skip it in your subsequent runs.
 
 ```
-bash ./install.sh
+pip install -r requirements.txt
 ```
 
 5. Run the python script. You can now access via `localhost:7000` or `<your ip>:7000`.
