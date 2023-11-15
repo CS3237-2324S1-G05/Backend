@@ -51,7 +51,6 @@ def handle_gantry_event(topic, msg):
 def inform_esp32_entrance():
   # Inform ESP32 to take photo of carpark, gantry entrance
   fn_name = 'inform_esp32_entrance'
-  time.sleep(1)
   publish_to_topic(mqtt_topic_constants.CAM_CARPARK_TOPIC, '1', fn_name)
   time.sleep(6)
   publish_to_topic(mqtt_topic_constants.CAM_GANTRY_ENTRANCE_TOPIC, '1', fn_name)
@@ -139,15 +138,16 @@ def handle_receive_ml_entrance_carplate(carplate):
     logger.error(f'{fn_name}: Carplate is empty')
   elif carplate == 'INVALID':
     logger.error(f'{fn_name}: Carplate is invalid')
-    # Redo the whole flow from ESP32 capturing images at entrance and carpark
-    inform_esp32_entrance()
   else:
     logger.info(f'{fn_name}: Carplate: {carplate}')
-    publish_to_topic(mqtt_topic_constants.STATUS_ENTRANCE_CARPLATE_TOPIC, carplate, fn_name)
-    # Add car entry to db to indicate car entered carpark
+    # Add car entry to db to indicate car entered carpark if car hasnt enter
     path = api_endpoint_constants.DB_ADD_ENTRY_ENDPOINT
     data = { 'carplate': carplate }
-    post_data_to_db(path, data)
+    if post_data_to_db(path, data) is None:
+      logger.error(f'{fn_name}: Cannot add car entry to db since car has already entered carpark')
+    else:
+      logger.info(f'{fn_name}: Added car entry to db')
+      publish_to_topic(mqtt_topic_constants.STATUS_ENTRANCE_CARPLATE_TOPIC, carplate, fn_name)    
       
 def handle_receive_ml_entrance_human_presence(human_presence):
   fn_name = 'handle_receive_ml_entrance_human_presence'
@@ -160,8 +160,6 @@ def handle_receive_ml_exit_carplate(carplate):
     logger.error(f'{fn_name}: Carplate is empty')
   elif carplate == 'INVALID':
     logger.error(f'{fn_name}: Carplate is invalid')
-    # Redo the whole flow from ESP32 capturing images at exit
-    inform_esp32_exit()
   else:
     logger.info(f'{fn_name}: Carplate: {carplate}')
     publish_to_topic(mqtt_topic_constants.STATUS_EXIT_CARPLATE_TOPIC, carplate, fn_name)
@@ -176,8 +174,6 @@ def process_parking_fee(carplate):
     car_entrance_time = get_data_from_db(api_endpoint_constants.DB_GET_CAR_LAST_ENTRY_TIME_ENDPOINT, carplate)
     if car_entrance_time is None:
       logger.error(f'{fn_name}: Cannot get car {carplate} last entry time')
-      # Redo the whole flow from ESP32 capturing images at exit
-      inform_esp32_exit()
     else:
       data = get_data_from_db(api_endpoint_constants.DB_GET_CAR_LAST_EXIT_TIME_ENDPOINT, carplate)   
       if data is None:
@@ -214,8 +210,7 @@ def handle_receive_ml_lot_carplate(topic, carplate):
     # No flow if carplate number cannot be detected
     logger.error(f'{fn_name}: Carplate is empty, but detected something at lot {lot_number}')
   elif carplate == 'INVALID':
-    # Redo the whole flow from ESP32 capturing images at lot
-    inform_esp32_lot(lot_number)
+    logger.error(f'{fn_name}: Carplate is invalid')
   else:
     logger.info(f'{fn_name}: Carplate: {carplate} at lot {lot_number}')
     update_lot_availability(lot_number, False)
@@ -251,9 +246,11 @@ def post_data_to_db(path, data):
   if response.status_code == status_code_constants.SUCCESS:
     message = response.json()['result']
     logger.info(f'POST request to {url} was successful: {message}')
+    return message
   else:
     error_msg = response.json()['error']
     logger.error(f'POST request to {url} failed: {response.status_code}: {error_msg}')
+    return None
       
 def put_data_to_db(path, data):
   url = f'http://{connection_constants.DB_IP}:{connection_constants.DB_PORT}{path}'
@@ -316,5 +313,5 @@ if __name__ == '__main__':
   client.on_connect = on_connect
   client.on_message = on_message
 
-  client.connect(connection_constants.BROKER_IP, connection_constants.BROKEN_PORT, 60)
+  client.connect(connection_constants.BROKER_IP, connection_constants.BROKER_PORT, 60)
   client.loop_forever()

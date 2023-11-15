@@ -179,6 +179,9 @@ def handle_add_entry():
   data = request.get_json()
   if 'carplate' in data:
     carplate = data['carplate']
+    if db.get_last_exit_time(carplate) is None:
+      # Car is already in the carpark
+      return jsonify({'error': f'Car {carplate} is already in carpark'}), status_code_constants.FORBIDDEN
     try:
       db.add_entry(carplate)
       return jsonify({'result': f'Entry for car {carplate} added successfully'}), status_code_constants.SUCCESS
