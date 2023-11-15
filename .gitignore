@@ -1,0 +1,7 @@
+
+*.log
+db/venv/*
+flask_backend/venv/*
+mqtt_backend/venv/*
+*.pyc
+*.jpg
