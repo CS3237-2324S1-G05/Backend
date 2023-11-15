@@ -52,12 +52,15 @@ def inform_esp32_entrance():
   # Inform ESP32 to take photo of carpark, gantry entrance
   fn_name = 'inform_esp32_entrance'
   publish_to_topic(mqtt_topic_constants.CAM_CARPARK_TOPIC, '1', fn_name)
-  time.sleep(6)
+  print("SENT ONE")
+  # time.sleep(6)
   publish_to_topic(mqtt_topic_constants.CAM_GANTRY_ENTRANCE_TOPIC, '1', fn_name)
+  print("SENT TWO")
 
 def handle_car_at_entrance():
   fn_name = 'handle_car_at_entrance'
   inform_esp32_entrance()
+  time.sleep(2)
   # Inform gantry the nearest lot (Return str(id) or str(None))
   nearest_available_lot = get_data_from_db(api_endpoint_constants.DB_GET_NEAREST_AVAILABLE_LOT_ENDPOINT)
   publish_to_topic(mqtt_topic_constants.STATUS_ENTRANCE_NEAREST_LOT_TOPIC, nearest_available_lot, fn_name)
@@ -143,11 +146,9 @@ def handle_receive_ml_entrance_carplate(carplate):
     # Add car entry to db to indicate car entered carpark if car hasnt enter
     path = api_endpoint_constants.DB_ADD_ENTRY_ENDPOINT
     data = { 'carplate': carplate }
-    if post_data_to_db(path, data) is None:
-      logger.error(f'{fn_name}: Cannot add car entry to db since car has already entered carpark')
-    else:
-      logger.info(f'{fn_name}: Added car entry to db')
-      publish_to_topic(mqtt_topic_constants.STATUS_ENTRANCE_CARPLATE_TOPIC, carplate, fn_name)    
+    post_data_to_db(path, data)
+    logger.info(f'{fn_name}: Added car entry to db')
+    publish_to_topic(mqtt_topic_constants.STATUS_ENTRANCE_CARPLATE_TOPIC, carplate, fn_name)    
       
 def handle_receive_ml_entrance_human_presence(human_presence):
   fn_name = 'handle_receive_ml_entrance_human_presence'
@@ -246,11 +247,9 @@ def post_data_to_db(path, data):
   if response.status_code == status_code_constants.SUCCESS:
     message = response.json()['result']
     logger.info(f'POST request to {url} was successful: {message}')
-    return message
   else:
     error_msg = response.json()['error']
     logger.error(f'POST request to {url} failed: {response.status_code}: {error_msg}')
-    return None
       
 def put_data_to_db(path, data):
   url = f'http://{connection_constants.DB_IP}:{connection_constants.DB_PORT}{path}'
