@@ -199,9 +199,10 @@ class Database:
 		for entry in ans:
 			if result == None or entry["entranceTime"] > result["entranceTime"]:
 				result = entry
-		if result is None:
-			raise Exception(f'Cannot find car {carplate}')
-		else:
+		# if result is None:
+		if result is not None:
+		# 	raise Exception(f'Cannot find car {carplate}')
+		# else:
 			self.logger.info(f'Car {carplate} entered carpark at {result}')
 			return result
 
