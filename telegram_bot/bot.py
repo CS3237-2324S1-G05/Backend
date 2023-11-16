@@ -9,6 +9,8 @@ Also returns the number of available lots in the carpark; Usage: /available_lot_
 import re
 import requests
 import os
+import math
+from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
 
@@ -24,16 +26,15 @@ class TelegramBot:
     await update.message.reply_text(f'Hello {username}, welcome to Smart Carpark!\n' + 
                                     'Please enter your carplate number using the following syntax to get your car\'s location: /where {carplate number}')
 
-  # For user to find their car location
   def is_car_plate_valid(self, car_plate):
     pattern = r'^S[A-HJ-NP-TV-Z]{2}[1-9][0-9]{0,3}(?<!0)[A-EG-HJ-MP-TV-Z]?$'
     if re.match(pattern, car_plate):
       return True
     else:
       return False
-    
+  
   def get_car_location(self, car_plate):
-    url = f'http://{constants.FLASK_BACKEND_IP}:{constants.FLASK_BACKEND_PORT}/db-backend/get-car-lot'
+    url = f'http://{constants.FLASK_BACKEND_IP}:{constants.FLASK_BACKEND_PORT}{constants.DB_GET_CAR_LOT_ENDPOINT}'
     url += f'?data={car_plate}'
     try:
       response = requests.get(url)
@@ -61,7 +62,7 @@ class TelegramBot:
         await update.message.reply_text(f'Invalid car plate number.')
         
   async def available_lot_count(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    url = f'http://{constants.FLASK_BACKEND_IP}:{constants.FLASK_BACKEND_PORT}/db-backend/get-number-of-available-lots'
+    url = f'http://{constants.FLASK_BACKEND_IP}:{constants.FLASK_BACKEND_PORT}{constants.DB_GET_NUMBER_OF_AVAILABLE_LOTS_ENDPOINT}'
     try:
       response = requests.get(url)
       if response.status_code == constants.SUCCESS_STATUS_CODE:
@@ -78,10 +79,55 @@ class TelegramBot:
     except requests.exceptions.ConnectionError as e:
       print('Error:', e)
       await update.message.reply_text('Unable to get available lot count.')
+      
+  def get_fee(self, entrance_time):
+    entrance_time = datetime.strptime(entrance_time, "%a, %d %b %Y %H:%M:%S %Z")
+    current_time = datetime.utcnow()
+    time_difference = (current_time - entrance_time).total_seconds()
+    print(f'Car entered at {entrance_time}, current time is {current_time}, time difference is {time_difference}')
+    parking_fee = 0
+    if time_difference > 120:
+      # Charge if exceed 2 minutes, Rounded up the hour, 1h = $2.5
+      parking_duration = math.ceil(time_difference / 3600)
+      parking_fee = "{:.2f}".format(round(parking_duration * 2.5, 2))
+    print(f'Parking fee is ${parking_fee}')
+    return parking_fee
+      
+  def get_fee_msg(self, car_plate):
+    url = f'http://{constants.FLASK_BACKEND_IP}:{constants.FLASK_BACKEND_PORT}{constants.DB_GET_LAST_ENTRY_TIME_ENDPOINT}'
+    url += f'?data={car_plate}'
+    return_error_msg = 'Unable to calculate parking fee.'
+    try:
+      response = requests.get(url)
+      if response.status_code == constants.SUCCESS_STATUS_CODE:
+        data = response.json()
+        entrance_time = data['result']
+        if entrance_time is None:
+          return return_error_msg
+        else:
+          fee = self.get_fee(entrance_time)
+          return f'The parking fee for car {car_plate} is ${fee}.'
+      else:
+        error_msg = response.json()['error']
+        print(f'Error {response.status_code}: {error_msg}')
+        return return_error_msg
+    except requests.exceptions.ConnectionError as e:
+      print('Error:', e)
+      return return_error_msg
   
+  async def fee(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if len(context.args) != 1:
+      await update.message.reply_text('Please enter using the following syntax: /fee {carplate number with no spacing}')
+    else:
+      car_plate = context.args[0].upper()
+      if self.is_car_plate_valid(car_plate):
+        await update.message.reply_text(self.get_fee_msg(car_plate))
+      else:
+        await update.message.reply_text(f'Invalid car plate number.')
+        
   # For unknown inputs
   async def unknown(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    commands = ['/start', '/where', '/available_lot_count']
+    commands = ['/start', '/where', '/available_lot_count', '/fee']
     message = 'Sorry, I didn\'t understand that.\nHere are the available commands:\n' + '\n'.join(commands)
     await update.message.reply_text(message)
 
@@ -94,6 +140,7 @@ if __name__ == '__main__':
   bot.builder.add_handler(CommandHandler('start', bot.start))
   bot.builder.add_handler(CommandHandler('where', bot.where))
   bot.builder.add_handler(CommandHandler('available_lot_count', bot.available_lot_count))
+  bot.builder.add_handler(CommandHandler('fee', bot.fee))
   bot.builder.add_handler(MessageHandler(None, bot.unknown))
 
   # Start polling

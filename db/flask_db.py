@@ -196,5 +196,5 @@ if __name__ == '__main__':
   except Exception as e:
     logger.error(f'Cannot connect to database: {e}')
     exit(1)
-  app.run(host='0.0.0.0', port= 6000)
+  app.run(host = '0.0.0.0', port = 6000)
   
