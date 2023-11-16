@@ -1,13 +1,17 @@
-# Backend and Database for Smart Carpark
+# Backend, Database, Bot for Smart Carpark
 
-This repository consists of codes for the backend (running MQTT Client and Flask API endpoints) and database (communicated through Flask API).
+This repository consists of codes for
+
+1. Backend (running MQTT Client and Flask API endpoints)
+2. Database (communicated through Flask API)
+3. Telegram Bot (requires Flask for database to be running)
 
 The actual database is running on MongoDB Atlas.
 
 ## Port numbers
 
 - [Backend] MQTT Broker: 1883
-- [Backend] Flask Endpoints: 7000
+- [Backend] Flask Endpoints: 3237
 - [Database] Flask Endpoints: 6000
 
 ## Backend Flask Endpoints
@@ -23,6 +27,7 @@ The actual database is running on MongoDB Atlas.
 - /db-backend/update-car-lot-entry
 - /db-backend/add-entry
 - /db-backend/update-car-exit-entry
+- /db-backend/get-car-last-exit-time
 
 ## Database Flask Endpoints
 
