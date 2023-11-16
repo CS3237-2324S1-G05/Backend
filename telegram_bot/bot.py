@@ -1,9 +1,7 @@
 """
 CS3237 Project Group 5 Telegram Bot
 Written by Venus Lim
-Returns the location of a car based on its carplate number; Usage: /where {carplate number}
 Carplate format (from https://en.wikipedia.org/wiki/Vehicle_registration_plates_of_Singapore)
-Also returns the number of available lots in the carpark; Usage: /available_lot_count
 """
 
 import re
@@ -24,7 +22,7 @@ class TelegramBot:
   async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     username = update.message.from_user.username
     await update.message.reply_text(f'Hello {username}, welcome to Smart Carpark!\n' + 
-                                    'Please enter your carplate number using the following syntax to get your car\'s location: /where {carplate number}')
+                                    'Enter / to see the available commands.')
 
   def is_car_plate_valid(self, car_plate):
     pattern = r'^S[A-HJ-NP-TV-Z]{2}[1-9][0-9]{0,3}(?<!0)[A-EG-HJ-MP-TV-Z]?$'
@@ -51,9 +49,9 @@ class TelegramBot:
       print('Error:', e)
       return 'Unable to get location of car.'
     
-  async def where(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+  async def locate(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) != 1:
-      await update.message.reply_text('Please enter using the following syntax: /where {carplate number with no spacing}')
+      await update.message.reply_text('Please enter using the following syntax: /locate {carplate number with no spacing}')
     else:
       car_plate = context.args[0].upper()
       if self.is_car_plate_valid(car_plate):
@@ -127,7 +125,7 @@ class TelegramBot:
         
   # For unknown inputs
   async def unknown(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    commands = ['/start', '/where', '/available_lot_count', '/fee']
+    commands = ['/start', '/locate', '/lots', '/fee']
     message = 'Sorry, I didn\'t understand that.\nHere are the available commands:\n' + '\n'.join(commands)
     await update.message.reply_text(message)
 
@@ -138,8 +136,8 @@ if __name__ == '__main__':
 
   # Add handlers for the different commands
   bot.builder.add_handler(CommandHandler('start', bot.start))
-  bot.builder.add_handler(CommandHandler('where', bot.where))
-  bot.builder.add_handler(CommandHandler('available_lot_count', bot.available_lot_count))
+  bot.builder.add_handler(CommandHandler('locate', bot.locate))
+  bot.builder.add_handler(CommandHandler('lots', bot.available_lot_count))
   bot.builder.add_handler(CommandHandler('fee', bot.fee))
   bot.builder.add_handler(MessageHandler(None, bot.unknown))
 
