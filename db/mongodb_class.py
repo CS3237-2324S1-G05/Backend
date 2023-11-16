@@ -121,7 +121,7 @@ class Database:
 
 	# Adds a new parking lot to the system
 	def add_lot(self):
-   # True by default
+   	# True by default
 		record = {"lotId": self.lots_index, "isAvailable": True}
 		self.lots_index = self.lots_index + 1
 		self.insert(self.lot_collection_name, record)
@@ -199,10 +199,7 @@ class Database:
 		for entry in ans:
 			if result == None or entry["entranceTime"] > result["entranceTime"]:
 				result = entry
-		# if result is None:
 		if result is not None:
-		# 	raise Exception(f'Cannot find car {carplate}')
-		# else:
 			self.logger.info(f'Car {carplate} entered carpark at {result}')
 			return result
 

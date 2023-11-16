@@ -93,12 +93,5 @@ def handle_carplate_recognition_lot():
   lot_number = request.headers.get('id')
   return send_image_to_ml(connection_constants.ML_CARPLATE_RECOGNITION_PORT, mqtt_topic_constants.ML_LOT_CARPLATE_RECOGNITION_ENDPOINT, request, 'lot', lot_number)
 
-@app.route("/test", methods=['GET'])
-def test():
-  return jsonify({'status': 'success'}), 200
-
 if __name__ == '__main__':
-  print(connection_constants.FLASK_BACKEND_IP)
-  print(connection_constants.FLASK_BACKEND_PORT)
   app.run(host = connection_constants.FLASK_BACKEND_IP, port = connection_constants.FLASK_BACKEND_PORT)
-  # print("Running")

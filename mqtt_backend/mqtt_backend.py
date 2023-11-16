@@ -52,10 +52,7 @@ def inform_esp32_entrance():
   # Inform ESP32 to take photo of carpark, gantry entrance
   fn_name = 'inform_esp32_entrance'
   publish_to_topic(mqtt_topic_constants.CAM_CARPARK_TOPIC, '1', fn_name)
-  print("SENT ONE")
-  # time.sleep(6)
   publish_to_topic(mqtt_topic_constants.CAM_GANTRY_ENTRANCE_TOPIC, '1', fn_name)
-  print("SENT TWO")
 
 def handle_car_at_entrance():
   fn_name = 'handle_car_at_entrance'
@@ -240,28 +237,26 @@ def get_data_from_db(path, param=None):
     return None
   
 def post_data_to_db(path, data):
-  url = f'http://{connection_constants.DB_IP}:{connection_constants.DB_PORT}{path}'
-  logger.info(f'POST request to {url}, data: {data}')
-  response = requests.post(url, json=data)
+  post_put_data_to_db(path, data, 'POST')
 
-  if response.status_code == status_code_constants.SUCCESS:
-    message = response.json()['result']
-    logger.info(f'POST request to {url} was successful: {message}')
-  else:
-    error_msg = response.json()['error']
-    logger.error(f'POST request to {url} failed: {response.status_code}: {error_msg}')
-      
 def put_data_to_db(path, data):
+  post_put_data_to_db(path, data, 'PUT')
+      
+def post_put_data_to_db(path, data, method):
   url = f'http://{connection_constants.DB_IP}:{connection_constants.DB_PORT}{path}'
-  logger.info(f'PUT request to {url}, data: {data}')
-  response = requests.put(url, json=data)
+  logger.info(f'{method} request to {url}, data: {data}')
+  
+  if method == 'PUT':
+    response = requests.put(url, json=data)
+  else:
+    response = requests.post(url, json=data)
 
   if response.status_code == status_code_constants.SUCCESS:
     result = response.json()['result']
-    logger.info(f'PUT request to {url} was successful: {result}')
+    logger.info(f'{method} request to {url} was successful: {result}')
   else:
     error_msg = response.json()['error']
-    logger.error(f'PUT request failed to {url}: {response.status_code}: {error_msg}')
+    logger.error(f'{method} request failed to {url}: {response.status_code}: {error_msg}')
 
 def on_connect(client, userdata, flags, rc):
   logger.info('Connected with result code: ' + str(rc))
