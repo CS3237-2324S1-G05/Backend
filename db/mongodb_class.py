@@ -250,16 +250,20 @@ class Database:
 	# Gets the lot where a car is parked
 	def get_car_lot(self, carplate: str):
 		cursor = self.select(constants.MONGODB_ENTRY_COLLECTION_NAME, {'carplate': carplate}).sort("entranceTime", -1).limit(1)
-		entry = cursor.next()
-		if 'exitTime' in entry:
-			self.logger.info(f"Car {carplate} is not in carpark")
-			return None
-		else:
-			if 'lotId' in entry:
-				lot = entry['lotId']
-				self.logger.info(f"Car {carplate} is parked at lot {lot}")
-				return str(lot)
-			else:
-				self.logger.error(f"Cannot find lot where car {carplate} is parked")
+		try:
+			entry = cursor.next()
+			if 'exitTime' in entry:
+				self.logger.info(f"Car {carplate} is not in carpark")
 				return None
+			else:
+				if 'lotId' in entry:
+					lot = entry['lotId']
+					self.logger.info(f"Car {carplate} is parked at lot {lot}")
+					return str(lot)
+				else:
+					self.logger.error(f"Cannot find lot where car {carplate} is parked")
+					return None
+		except:
+			self.logger.error(f"Cannot find car {carplate}")
+			return None
   
