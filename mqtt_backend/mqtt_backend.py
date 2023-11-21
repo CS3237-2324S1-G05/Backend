@@ -183,10 +183,10 @@ def process_parking_fee(carplate):
         logger.info(f'{fn_name}: Current time (exit time): {current_time}, Car entrance time: {car_entrance_time}')              
         time_difference = (current_time - car_entrance_time).total_seconds()
         
-        # Free for first 2 minutes
+        # Free for first 10 minutes
         parking_fee = 0
-        if time_difference > 120:
-          # Charge if exceed 2 minutes, Rounded up the hour, 1h = $2.5
+        if time_difference > 600:
+          # Charge if exceed 10 minutes, Rounded up the hour, 1h = $2.5
           parking_duration = math.ceil(time_difference / 3600)
           parking_fee = "{:.2f}".format(round(parking_duration * 2.5, 2))
           logger.info(f'{fn_name}: Parking fee for {carplate} is ${parking_fee} for {parking_duration} hours')
