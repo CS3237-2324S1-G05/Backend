@@ -1,5 +1,6 @@
-# Backend, Database, Bot for Smart Carpark
+# Smart Carpark Backend, Database, and Bot Codebases 🚗💡
 
+Welcome to the GitHub repository for the Smart Carpark system's centralised backend.
 This repository consists of codes for
 
 1. Backend (running MQTT Client and Flask API endpoints)
@@ -10,9 +11,9 @@ The actual database is running on MongoDB Atlas.
 
 ## Port numbers
 
-- [Backend] MQTT Broker: 1883
-- [Backend] Flask Endpoints: 3237
-- [Database] Flask Endpoints: 6000
+- MQTT Broker: 1883
+- Flask Backend Endpoints: 3237
+- Flask Database Endpoints: 6000
 
 ## Backend Flask Endpoints
 
@@ -35,3 +36,10 @@ The actual database is running on MongoDB Atlas.
 - /backend/carplate-recognition/entrance
 - /backend/carplate-recognition/exit
 - /backend/carplate-recognition/lot
+
+---
+
+We're excited to see how you'll help us drive the future of smart parking! 🌟
+
+Happy coding! 🚀👩‍💻👨‍💻\
+CS3237 Group G05 AY23/24 Semester 1
