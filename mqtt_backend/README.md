@@ -1,8 +1,20 @@
-# Smart Carpark Backend (MQTT)
+# Smart Carpark Backend (MQTT) Codebase 🚗💡
 
-This is the centralised MQTT backend for the smart carpark.
+Welcome to the GitHub repository for the Smart Carpark system's centralised MQTT backend.
 
-## Prerequisites
+This is done as part of the Project for CS3237 - Introduction to Internet of Things, AY23/24 Semester 1.
+
+Done by Group 5!
+
+## Repository Structure 🗂️
+
+Here's a guide to what you'll find in this repository:
+
+- `mqtt_backend.py`: Main python script for backend running as MQTT client
+
+- `requirements.txt`: Consists of required packages for `mqtt_backend.py`
+
+## Setup & Installation ⚙️
 
 1. Install [Python 3.0](https://www.python.org/downloads/) (Preferably Python 3.10.12) on your machine.
 2. Install MQTT. Start up the service. The broker should be running on port `1883`.
@@ -62,3 +74,10 @@ source ./venv/bin/activate
 ```
 python3 mqtt_backend.py
 ```
+
+---
+
+We're excited to see how you'll help us drive the future of smart parking! 🌟
+
+Happy coding! 🚀👩‍💻👨‍💻\
+CS3237 Group G05
